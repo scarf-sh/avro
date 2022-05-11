@@ -59,6 +59,17 @@ deconflict (S.Array w) (S.Array r)   = Read.Array <$> deconflict w r
 
 deconflict (S.Map w) (S.Map r)       = Read.Map <$> deconflict w r
 
+-- This is a special case that needs handling at Scarf because named 
+-- enums were broken in older versions of Avro and we can not migrate 
+-- (or read at all) our data easily.
+deconflict w@Enum{} (NamedType typeName)
+  | name w == parseFullname (Text.pack "ConnectionType") && name w == typeName = pure Read.Enum 
+    { Read.name = name w
+    , Read.aliases = aliases w
+    , Read.doc = doc w
+    , Read.symbols = symbols w
+    }
+
 deconflict w@S.Enum{} r@S.Enum{}
   | name w == name r && symbols w `contains` symbols r = pure Read.Enum
     { Read.name    = name r
